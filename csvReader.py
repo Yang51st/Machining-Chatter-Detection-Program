@@ -28,7 +28,7 @@ timeXF=[] #Stores the time at which sensor readings have been taken.
 accelY=[]
 timeYF=[] #Stores the time at which sensor readings have been taken.
 
-with open("0p5endmillPCBdataF3.csv",mode="r") as file:
+with open("VibrationData/ChatterIndicatorTests/PCBData1.csv",mode="r") as file:
     csvFile = csv.reader(file)
     for lines in csvFile:
         try: #Skip the lines of data at the beginning that do not contain sensor readings.
@@ -37,7 +37,7 @@ with open("0p5endmillPCBdataF3.csv",mode="r") as file:
         except:
             pass
 
-with open("0p5endmillPCBdataF3.csv",mode="r") as file:
+with open("VibrationData/ChatterIndicatorTests/PCBData1.csv",mode="r") as file:
     csvFile = csv.reader(file)
     for lines in csvFile:
         try: #Skip the lines of data at the beginning that do not contain sensor readings.
@@ -51,7 +51,7 @@ accelY=signal.detrend(accelY,type="constant")
 
 windowTime=0.3 #A range of 0.3 seconds of data will be analyzed at a time.
 revolutionTime=0.02 #Time it takes for the spindle to rotate a full term. Used to approximate bisection point timings.
-poincare=484 #The specific poincare section that will be graphed so bisection point and trajectory plotting can be verified.
+poincare=7.4 #The specific time of the poincare section that will be graphed so bisection point and trajectory plotting can be verified.
 packageResolution=0.1 #Every 0.1 seconds, a new window of data will be analyzed.
 lens=int(len(timeXF)/timeXF[-1]*packageResolution) #Calculates how many readings will be analyzed at a time.
 
@@ -92,7 +92,7 @@ while True:
             bisX.append(dispX[tindex])              #meaning that the bisection point would ideally be in the same position again.
             bisY.append(dispY[tindex])
             prevTim=timeX[tindex]
-    if windex==(poincare-windowTime/packageResolution):
+    if windex==(poincare*10-windowTime/packageResolution):
         """
         plt.figure(1)
         plt.clf()

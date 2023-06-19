@@ -171,7 +171,7 @@ except Exception:
 # Close handle
 ljm.close(handle)
 
-filename="PCB_F18IN_T100_D0p125.csv"
+filename="PCB_F18IN_T100_D0p125IN1.csv"
 with open(filename, 'w',newline="") as csvfile:
     csvwriter = csv.writer(csvfile)
     for reading in range(int(scanRate),len(accelX)): #Skipping the first second of data, which contains skipped scans.
