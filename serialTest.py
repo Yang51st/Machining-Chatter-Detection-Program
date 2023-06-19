@@ -171,11 +171,11 @@ except Exception:
 # Close handle
 ljm.close(handle)
 
-filename="PCB_F18IN_T100_D0p125IN1.csv"
+filename="PCB_F18IN_T100_D0pXXXIN.csv"
 with open(filename, 'w',newline="") as csvfile:
     csvwriter = csv.writer(csvfile)
     for reading in range(int(scanRate),len(accelX)): #Skipping the first second of data, which contains skipped scans.
-        csvwriter.writerow([timeI[reading]-timeI[scanRate],accelX[reading],accelY[reading]]) #Data made to still start at 0 seconds.
+        csvwriter.writerow([timeI[reading]-timeI[int(scanRate)],accelX[reading],accelY[reading]]) #Data made to still start at 0 seconds.
 
 #Plotting the raw voltage readings that will end up being calculated for acceleration data.
 plt.figure(1)

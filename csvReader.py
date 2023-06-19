@@ -28,7 +28,7 @@ timeXF=[] #Stores the time at which sensor readings have been taken.
 accelY=[]
 timeYF=[] #Stores the time at which sensor readings have been taken.
 
-with open("VibrationData/ChatterIndicatorTests/PCBData1.csv",mode="r") as file:
+with open("VibrationData/Steel/EndMill/12MM/3000RPM/PCB_F18IN_T100_D0pXXXIN.csv",mode="r") as file:
     csvFile = csv.reader(file)
     for lines in csvFile:
         try: #Skip the lines of data at the beginning that do not contain sensor readings.
@@ -37,7 +37,7 @@ with open("VibrationData/ChatterIndicatorTests/PCBData1.csv",mode="r") as file:
         except:
             pass
 
-with open("VibrationData/ChatterIndicatorTests/PCBData1.csv",mode="r") as file:
+with open("VibrationData/Steel/EndMill/12MM/3000RPM/PCB_F18IN_T100_D0pXXXIN.csv",mode="r") as file:
     csvFile = csv.reader(file)
     for lines in csvFile:
         try: #Skip the lines of data at the beginning that do not contain sensor readings.
