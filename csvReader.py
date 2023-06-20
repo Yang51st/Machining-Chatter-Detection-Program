@@ -28,21 +28,21 @@ timeXF=[] #Stores the time at which sensor readings have been taken.
 accelY=[]
 timeYF=[] #Stores the time at which sensor readings have been taken.
 
-with open("VibrationData/Steel/EndMill/12MM/3000RPM/PCB_F18IN_T100_D0pXXXIN.csv",mode="r") as file:
+filename="VibrationData/ChatterIndicatorTests/PCBData4.csv"
+with open(filename,mode="r") as file:
     csvFile = csv.reader(file)
     for lines in csvFile:
         try: #Skip the lines of data at the beginning that do not contain sensor readings.
             timeXF.append(float(lines[0]))
-            accelX.append((float(lines[1])/0.001156)) #Divide by 1000 to get acceleration in meters per second squared.
+            accelX.append(float(lines[1])) #Divide by 1000 to get acceleration in meters per second squared.
         except:
             pass
-
-with open("VibrationData/Steel/EndMill/12MM/3000RPM/PCB_F18IN_T100_D0pXXXIN.csv",mode="r") as file:
+with open(filename,mode="r") as file:
     csvFile = csv.reader(file)
     for lines in csvFile:
         try: #Skip the lines of data at the beginning that do not contain sensor readings.
             timeYF.append(float(lines[0]))
-            accelY.append((float(lines[2])/0.001055)) #Divide by 1000 to get acceleration in meters per second squared.
+            accelY.append(float(lines[2])) #Divide by 1000 to get acceleration in meters per second squared.
         except:
             pass
 
@@ -51,7 +51,7 @@ accelY=signal.detrend(accelY,type="constant")
 
 windowTime=0.3 #A range of 0.3 seconds of data will be analyzed at a time.
 revolutionTime=0.02 #Time it takes for the spindle to rotate a full term. Used to approximate bisection point timings.
-poincare=7.4 #The specific time of the poincare section that will be graphed so bisection point and trajectory plotting can be verified.
+poincare=9.2 #The specific time of the poincare section that will be graphed so bisection point and trajectory plotting can be verified.
 packageResolution=0.1 #Every 0.1 seconds, a new window of data will be analyzed.
 lens=int(len(timeXF)/timeXF[-1]*packageResolution) #Calculates how many readings will be analyzed at a time.
 
