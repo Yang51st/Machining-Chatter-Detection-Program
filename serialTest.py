@@ -48,6 +48,8 @@ accelX=[] #Stores the raw voltage readings that will be calculated for accelerat
 accelY=[] #Stores the raw voltage readings that will be calculated for acceleration readings.
 
 MAX_REQUESTS = 91  # The number of eStreamRead calls that will be performed. Time taken for this is usually half the value, in seconds.
+X_AXIS_SENSITIVITY=0.001156 #Obtained from sensor callibration sheet.
+Y_AXIS_SENSITIVITY=0.001055 #Obtained from sensor callibration sheet.
 
 # Open first found LabJack
 handle = ljm.openS("ANY", "ANY", "ANY")  # Any device, Any connection, Any identifier
@@ -170,15 +172,27 @@ except Exception:
 
 # Close handle
 ljm.close(handle)
+timeOffsetAmount=timeI[int(scanRate)] #Amount to shift time readings by to get data starting at 0 seconds.
+for reading in range(int(scanRate),len(accelX)): #Skipping the first second of data, which contains skipped scans.
+    timeI[reading]=timeI[reading]-timeOffsetAmount
+    accelX[reading]=accelX[reading]/X_AXIS_SENSITIVITY #Scaling data from X-axis sensor to measure acceleration in meters per second squared.
+    accelY[reading]=accelY[reading]/Y_AXIS_SENSITIVITY #Scaling data from Y-axis sensor to measure acceleration in meters per second squared.
+
+#Removing first second of bad data and aligning the acceleration readings to start and end at 0.
+timeI=timeI[int(scanRate):]
+accelX=accelX[int(scanRate):]
+accelY=accelY[int(scanRate):]
+accelX=signal.detrend(accelX,type="constant")
+accelY=signal.detrend(accelY,type="constant")
 
 filename="PCB_F18IN_T100_D0pXXXIN.csv"
 with open(filename, 'w',newline="") as csvfile:
     csvwriter = csv.writer(csvfile)
-    for reading in range(int(scanRate),len(accelX)): #Skipping the first second of data, which contains skipped scans.
-        csvwriter.writerow([timeI[reading]-timeI[int(scanRate)],accelX[reading],accelY[reading]]) #Data made to still start at 0 seconds.
+    for reading in range(len(accelX)): #Skipping the first second of data, which contains skipped scans.
+        csvwriter.writerow([timeI[reading],accelX[reading],accelY[reading]]) #Data made to still start at 0 seconds.
 
 #Plotting the raw voltage readings that will end up being calculated for acceleration data.
 plt.figure(1)
-plt.plot(timeI[int(scanRate):],accelX[int(scanRate):])
-plt.plot(timeI[int(scanRate):],accelY[int(scanRate):])
+plt.plot(timeI,accelX)
+plt.plot(timeI,accelY)
 plt.show()
