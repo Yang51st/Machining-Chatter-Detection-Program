@@ -45,6 +45,7 @@ from statistics import mean
 import csv
 import RestfulAPIBase as Base
 from math import tan, pi
+import statistics
 
 class ChatterDetector:
     def __init__(self):
@@ -53,10 +54,12 @@ class ChatterDetector:
         self.accelY=[] #Stores the acceleration readings on the Y-axis.
         self.X_AXIS_SENSITIVITY=0.001156 #Obtained from sensor callibration sheet.
         self.Y_AXIS_SENSITIVITY=0.001055 #Obtained from sensor callibration sheet.
-        self.X_AXIS_OFFSET=-290.337933013119 #Calculated experimentally from X-axis readings.
-        self.Y_AXIS_OFFSET=-366.66280307069917 #Calculated experimentally from Y-axis readings.
+        self.timeWindow=0.3
+        self.timeIndex=5
         self.start=-999 #Time at which a batch of readings begins.
         self.end=-999 #Time at which a batch of readings ends.
+        self.yChatter=[]
+        self.tChatter=[]
         self.handle=None
         self.aScanListNames=[]
         self.numAddresses=0
@@ -70,6 +73,18 @@ class ChatterDetector:
         self.millFeed=0
         self.toolEngagement=0
         self.inclineAngle=0
+        self.revolutionTime=60/3000
+        self.N,self.Wn=signal.buttord(0.05,0.0375,3,40)
+        self.startW=0
+        self.endW=0
+
+    def butter_highpass(self,N, Wn): #Helper function to apply Butterworth filter to data.
+        return butter(N,Wn,'high',output="sos")
+
+    def butter_highpass_filter(self,data, N,Wn): #Function to apply Butterworth filter to data.
+        sos = self.butter_highpass(N,Wn)
+        y = signal.sosfilt(sos, data)
+        return y
 
     def ConnectDAQ(self):
         # Open first found LabJack
@@ -162,9 +177,62 @@ class ChatterDetector:
                 print("  1st scan out of %i: %s" % (scans, ainStr))
                 print("  Scans Skipped = %0.0f, Scan Backlogs: Device = %i, LJM = "
                     "%i" % (curSkip/self.numAddresses, ret[1], ret[2]))
-                self.accelX+=aData[0::2] #Separating out the readings from AIN0, which will be along the X axis.
-                self.accelY+=aData[1::2] #Separating out the readings from AIN3, which will be along the Y axis.
+                xBuf=aData[0::2] #Separating out the readings from AIN0, which will be along the X axis.
+                yBuf=aData[1::2] #Separating out the readings from AIN3, which will be along the Y axis.
+                tBuf=[]
+                intervalTime=0.5/len(xBuf)
+                for j in range(len(xBuf)):
+                    tBuf.append(intervalTime*j+0.5*(i-1))
+                    xBuf[j]=xBuf[j]/self.X_AXIS_SENSITIVITY
+                    yBuf[j]=yBuf[j]/self.Y_AXIS_SENSITIVITY
+                xBuf=signal.detrend(xBuf,type="constant")
+                yBuf=signal.detrend(yBuf,type="constant")
+                self.accelX+=list(xBuf)
+                self.accelY+=list(yBuf)
+                self.times+=tBuf
                 i += 1
+
+                while True:
+                    self.startW=self.timeIndex*8000*0.1
+                    self.endW=self.startW+self.timeWindow*8000
+                    if self.endW>=len(self.times):
+                        break
+                    self.startW=int(self.startW)
+                    self.endW=int(self.endW)
+                    filtTime=self.times[self.startW:self.endW]
+
+                    filtaccelX=self.accelX[self.startW:self.endW]
+                    filtaccelX=signal.detrend(filtaccelX,type="linear")
+                    filtaccelX=self.butter_highpass_filter(filtaccelX,self.N,self.Wn)
+                    veloX=cumtrapz(filtaccelX,filtTime,initial=0.0)
+                    veloX=signal.detrend(veloX, type="linear")
+                    dispX=cumtrapz(veloX,filtTime,initial=0.0)
+
+                    filtaccelY=self.accelY[self.startW:self.endW]
+                    filtaccelY=signal.detrend(filtaccelY,type="linear")
+                    filtaccelY=self.butter_highpass_filter(filtaccelY,self.N,self.Wn)
+                    veloY=cumtrapz(filtaccelY,filtTime,initial=0.0)
+                    veloY=signal.detrend(veloY, type="linear")
+                    dispY=cumtrapz(veloY,filtTime,initial=0.0)
+
+                    prevTim=filtTime[0]
+                    bisX=[] #Stores X-value of bisection points.
+                    bisY=[] #Stores Y-value of bisection points.
+                    for tindex in range(len(filtTime)):
+                        if filtTime[tindex]>=(prevTim+self.revolutionTime): #Checks to see if enough time has passed for a full rotation,
+                            bisX.append(dispX[tindex])              #meaning that the bisection point would ideally be in the same position again.
+                            bisY.append(dispY[tindex])
+                            prevTim=filtTime[tindex]
+
+                    #Taking the standard deviation of the bisection points and of the overall trajectory, then calculating the chatter indicator from them.
+                    sX=statistics.stdev(bisX)
+                    sY=statistics.stdev(bisY)
+                    tX=statistics.stdev(dispX)
+                    tY=statistics.stdev(dispY)
+                    chatterIndicator=sX*sY/(tX*tY)
+                    self.tChatter.append(self.timeIndex*0.1+self.timeWindow)
+                    self.yChatter.append(chatterIndicator)
+                    self.timeIndex+=1
 
             self.end = datetime.now()
 
@@ -175,10 +243,6 @@ class ChatterDetector:
             print("Timed Scan Rate = %f scans/second" % (self.totScans / tt)) #The actual sampling frequency.
             print("Timed Sample Rate = %f samples/second" % (self.totScans * self.numAddresses / tt))
             print("Skipped scans = %0.0f" % (self.totSkip / self.numAddresses))
-
-            elapse=tt/len(self.accelY) #Calculating the average elapsed time for a reading to take place.
-            for k in range(len(self.accelY)): #Adding in the calculated times for when each reading should have taken place.
-                self.times.append(elapse*k)
 
         except ljm.LJMError:
             ljme = sys.exc_info()[1]
@@ -199,12 +263,6 @@ class ChatterDetector:
 
         # Close handle
         ljm.close(self.handle)
-        timeOffsetAmount=self.times[int(self.scanRate)] #Amount to shift time readings by to get data starting at 0 seconds.
-        for reading in range(int(self.scanRate),len(self.accelX)): #Skipping the first second of data, which contains skipped scans.
-            self.times[reading]=self.times[reading]-timeOffsetAmount
-            self.accelX[reading]=self.accelX[reading]/self.X_AXIS_SENSITIVITY #Scaling data from X-axis sensor to measure acceleration in meters per second squared.
-            self.accelY[reading]=self.accelY[reading]/self.Y_AXIS_SENSITIVITY #Scaling data from Y-axis sensor to measure acceleration in meters per second squared.
-
         #Removing first second of bad data and aligning the acceleration readings to start and end at 0.
         self.times=self.times[int(self.scanRate):]
         self.accelX=self.accelX[int(self.scanRate):]
@@ -220,8 +278,8 @@ class ChatterDetector:
 
         #Plotting the raw voltage readings that will end up being calculated for acceleration data.
         plt.figure(1)
-        plt.plot(self.times,self.accelX)
-        plt.plot(self.times,self.accelY)
+        plt.plot(self.tChatter[3:],self.yChatter[3:])
+        plt.plot(self.tChatter[3:],self.yChatter[3:],"ro")
         plt.show()
 
     def PromptSpindleSpeedIncrease(self):
