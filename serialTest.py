@@ -1,5 +1,6 @@
 #AIN0 is X-axis, AIN3 is Y-axis.
 #Black is X, Silver is Y.
+#Always cut along X-axis.
 """
 Demonstrates how to stream using the eStream functions.
 Relevant Documentation:
@@ -41,7 +42,7 @@ import matplotlib.pyplot as plt
 import time
 from labjack import ljm
 from scipy.signal import butter
-from statistics import mean
+from scipy.optimize import curve_fit
 import csv
 import RestfulAPIBase as Base
 from math import tan, pi
@@ -49,34 +50,27 @@ import statistics
 
 class ChatterDetector:
     def __init__(self):
-        self.times=[] #Stores the time at which sensor readings have been taken.
-        self.accelX=[] #Stores the acceleration readings on the X-axis.
-        self.accelY=[] #Stores the acceleration readings on the Y-axis.
         self.X_AXIS_SENSITIVITY=0.001156 #Obtained from sensor callibration sheet.
         self.Y_AXIS_SENSITIVITY=0.001055 #Obtained from sensor callibration sheet.
-        self.timeWindow=0.3
-        self.timeIndex=5
+
+        self.timeWindow=0.3 #Length of the period of time that will be analyzed for chatter.
+        self.timeIndex=5 #Index at which chatter detection program will begin, so as to avoid skipped scans in data.
         self.start=-999 #Time at which a batch of readings begins.
         self.end=-999 #Time at which a batch of readings ends.
-        self.yChatter=[]
-        self.tChatter=[]
+
         self.handle=None
         self.aScanListNames=[]
         self.numAddresses=0
         self.scanRate=0
         self.totSkip=0
         self.totScans=0
+
         self.interface=Base.RestfulInterface()
-        self.stockX=0
-        self.stockY=0
-        self.stockZ=0
-        self.millFeed=0
-        self.toolEngagement=0
-        self.inclineAngle=0
-        self.revolutionTime=60/3000
-        self.N,self.Wn=signal.buttord(0.05,0.0375,3,40)
-        self.startW=0
-        self.endW=0
+        self.MachineOffsetX=0 #Offset of the machine coordinate along X from the part zero.
+        self.inclineAngle=7 #This measure is in degrees.
+
+        self.lobeRPM=[]
+        self.lobeDepth=[]
 
     def butter_highpass(self,N, Wn): #Helper function to apply Butterworth filter to data.
         return butter(N,Wn,'high',output="sos")
@@ -154,10 +148,22 @@ class ChatterDetector:
             e = sys.exc_info()[1]
             print(e)
 
-    def StartChatterMonitor(self):
+    def RecordCut(self):
+        times=[] #Stores the time at which sensor readings have been taken.
+        accelX=[] #Stores the acceleration readings on the X-axis.
+        accelY=[] #Stores the acceleration readings on the Y-axis.
+        tChatter=[] #Stores the time at which chatter indicators were calculated.
+        yChatter=[] #Stores the chatter indicator values calculated.
+        startWindow=0 #Beginning index of the 0.3 second period that will be analyzed for chatter.
+        endWindow=0 #Ending index of the 0.3 second window that will be analyzed for chatter.
+
+        N,Wn=signal.buttord(0.05,0.0375,3,40) #Calculating the parameters for a Butterworth filter for processing the sensor data.
+
+        revolutionTime=60/self.interface.GetSpindleSpeed() #Calculates how long, in seconds, a revolution of the spindle takes.
+
         i = 1
         try:
-            while i<91:
+            while 91:
                 ret = ljm.eStreamRead(self.handle)
 
                 aData = ret[0] #The variable aData will contain alternating readings from both channels since it scans in order.
@@ -187,30 +193,30 @@ class ChatterDetector:
                     yBuf[j]=yBuf[j]/self.Y_AXIS_SENSITIVITY
                 xBuf=signal.detrend(xBuf,type="constant")
                 yBuf=signal.detrend(yBuf,type="constant")
-                self.accelX+=list(xBuf)
-                self.accelY+=list(yBuf)
-                self.times+=tBuf
+                accelX+=list(xBuf)
+                accelY+=list(yBuf)
+                times+=tBuf
                 i += 1
 
                 while True:
-                    self.startW=self.timeIndex*8000*0.1
-                    self.endW=self.startW+self.timeWindow*8000
-                    if self.endW>=len(self.times):
+                    startWindow=self.timeIndex*8000*0.1
+                    endWindow=startWindow+self.timeWindow*8000
+                    if endWindow>=len(times):
                         break
-                    self.startW=int(self.startW)
-                    self.endW=int(self.endW)
-                    filtTime=self.times[self.startW:self.endW]
+                    startWindow=int(startWindow)
+                    endWindow=int(endWindow)
+                    filtTime=times[startWindow:endWindow]
 
-                    filtaccelX=self.accelX[self.startW:self.endW]
+                    filtaccelX=accelX[startWindow:endWindow]
                     filtaccelX=signal.detrend(filtaccelX,type="linear")
-                    filtaccelX=self.butter_highpass_filter(filtaccelX,self.N,self.Wn)
+                    filtaccelX=self.butter_highpass_filter(filtaccelX,N,Wn)
                     veloX=cumtrapz(filtaccelX,filtTime,initial=0.0)
                     veloX=signal.detrend(veloX, type="linear")
                     dispX=cumtrapz(veloX,filtTime,initial=0.0)
 
-                    filtaccelY=self.accelY[self.startW:self.endW]
+                    filtaccelY=accelY[startWindow:endWindow]
                     filtaccelY=signal.detrend(filtaccelY,type="linear")
-                    filtaccelY=self.butter_highpass_filter(filtaccelY,self.N,self.Wn)
+                    filtaccelY=self.butter_highpass_filter(filtaccelY,N,Wn)
                     veloY=cumtrapz(filtaccelY,filtTime,initial=0.0)
                     veloY=signal.detrend(veloY, type="linear")
                     dispY=cumtrapz(veloY,filtTime,initial=0.0)
@@ -219,8 +225,8 @@ class ChatterDetector:
                     bisX=[] #Stores X-value of bisection points.
                     bisY=[] #Stores Y-value of bisection points.
                     for tindex in range(len(filtTime)):
-                        if filtTime[tindex]>=(prevTim+self.revolutionTime): #Checks to see if enough time has passed for a full rotation,
-                            bisX.append(dispX[tindex])              #meaning that the bisection point would ideally be in the same position again.
+                        if filtTime[tindex]>=(prevTim+revolutionTime): #Checks to see if enough time has passed for a full rotation,
+                            bisX.append(dispX[tindex])                      #meaning that the bisection point would ideally be in the same position again.
                             bisY.append(dispY[tindex])
                             prevTim=filtTime[tindex]
 
@@ -230,8 +236,11 @@ class ChatterDetector:
                     tX=statistics.stdev(dispX)
                     tY=statistics.stdev(dispY)
                     chatterIndicator=sX*sY/(tX*tY)
-                    self.tChatter.append(self.timeIndex*0.1+self.timeWindow)
-                    self.yChatter.append(chatterIndicator)
+                    tChatter.append(self.timeIndex*0.1+self.timeWindow)
+                    yChatter.append(chatterIndicator)
+                    if chatterIndicator>0.9:
+                        self.lobeRPM.append(self.interface.GetSpindleSpeed())
+                        self.lobeDepth.append(self.GetDepthOfCut())
                     self.timeIndex+=1
 
             self.end = datetime.now()
@@ -261,25 +270,23 @@ class ChatterDetector:
             e = sys.exc_info()[1]
             print(e)
 
-        # Close handle
-        ljm.close(self.handle)
         #Removing first second of bad data and aligning the acceleration readings to start and end at 0.
-        self.times=self.times[int(self.scanRate):]
-        self.accelX=self.accelX[int(self.scanRate):]
-        self.accelY=self.accelY[int(self.scanRate):]
-        self.accelX=signal.detrend(self.accelX,type="constant")
-        self.accelY=signal.detrend(self.accelY,type="constant")
-
-        filename="PCB_F18IN_T50_D0p25IN4.csv"
+        times=times[int(self.scanRate):]
+        accelX=accelX[int(self.scanRate):]
+        accelY=accelY[int(self.scanRate):]
+        accelX=signal.detrend(accelX,type="constant")
+        accelY=signal.detrend(accelY,type="constant")
+        timestamp=datetime.now()
+        filename="PCB_"+str(timestamp.month)+"_"+str(timestamp.day)+"_"+str(timestamp.hour)+"_"+str(timestamp.minute)+".csv"
         with open(filename, 'w',newline="") as csvfile:
             csvwriter = csv.writer(csvfile)
-            for reading in range(len(self.accelX)): #Skipping the first second of data, which contains skipped scans.
-                csvwriter.writerow([self.times[reading],self.accelX[reading],self.accelY[reading]]) #Data made to still start at 0 seconds.
+            for reading in range(len(accelX)): #Skipping the first second of data, which contains skipped scans.
+                csvwriter.writerow([times[reading],accelX[reading],accelY[reading]]) #Data made to still start at 0 seconds.
 
         #Plotting the raw voltage readings that will end up being calculated for acceleration data.
         plt.figure(1)
-        plt.plot(self.tChatter[3:],self.yChatter[3:])
-        plt.plot(self.tChatter[3:],self.yChatter[3:],"ro")
+        plt.plot(tChatter[3:],yChatter[3:])
+        plt.plot(tChatter[3:],yChatter[3:],"ro")
         plt.show()
 
     def PromptSpindleSpeedIncrease(self):
@@ -288,12 +295,32 @@ class ChatterDetector:
     def PromptSpindleSpeedDecrease(self):
         print("Decrease Spindle Speed by 5 percent.")
 
-    def CalculateDepthOfCut(self):
+    def GetDepthOfCut(self):
         toolPositionX=self.interface.GetMachinePositionX()
-        depthOfCut=tan(self.inclineAngle*pi/180.0)*toolPositionX
+        depthOfCut=tan(self.inclineAngle*pi/180.0)*(toolPositionX-self.MachineOffsetX)
+        return depthOfCut
         
     def GetMachineSettings(self):
-        self.millFeed=float(input("Enter Mill Feed in in/min."))
-        self.toolEngagement=float(input("Enter Percent Tool Engagement."))
-        self.inclineAngle=float(input("Enter angle of workpiece incline."))
         #Attempt to get workpiece dimensions from API.
+        self.MachineOffsetX=float(input("What is the X offset of the part?"))
+
+    def long_function(n,x1,x2,x3,x4,c2,c3,c4):
+        return 1/(2*x1*abs(np.minimum(np.real(-(x2+c2*1j)/(n**2*1j/(x3+c3*1j)+(x4+c4*1j)*1j*n/(x3+c3*1j)+1)),np.array([0 for kk in range(len(n))]))))
+        #Above is the equation from the 2021 Brecher paper. Note how some of the constants are actually complex, so extra unknowns are added.
+
+    def CreateStabilityLobe(self):
+        popt,pcov=curve_fit(self.long_function,self.lobeRPM,self.lobeDepth,maxfev=900000) #Fitting a curve, with a high maxfev value to give enough time for calculation.
+        yFit=self.long_function(np.array([k for k in range(1000,15000)]),*popt) #Getting the Y values of points on the fitted curve.
+        plt.plot(np.array([k for k in range(1000,15000)]),yFit) #Plotting the curve fitted to the data.
+        plt.plot(self.lobeRPM,self.lobeDepth,"k.")
+        plt.show()
+        timestamp=datetime.now()
+        filename="Stability_Lobe_Constants_For_"+str(timestamp.month)+"_"+str(timestamp.day)+"_"+str(timestamp.hour)+"_"+str(timestamp.minute)+".csv"
+        with open(filename, 'w',newline="") as csvfile:
+            csvwriter = csv.writer(csvfile)
+            csvwriter.writerow(list(popt))
+    
+    def DetectorShutdown(self):
+        # Close handle and connection with machine.
+        ljm.close(self.handle)
+        self.interface.Shutdown()

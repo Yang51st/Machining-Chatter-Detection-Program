@@ -28,7 +28,7 @@ timeXF=[] #Stores the time at which sensor readings have been taken.
 accelY=[]
 timeYF=[] #Stores the time at which sensor readings have been taken.
 
-filename="VibrationData/ChatterIndicatorTests/PCB_F18IN_T100_D0pXXXIN.csv"
+filename="VibrationData/Aluminum/End Mill/0p5IN/12000RPM/PCB_F60IN_T25_D0p125IN.csv"
 with open(filename,mode="r") as file:
     csvFile = csv.reader(file)
     for lines in csvFile:
