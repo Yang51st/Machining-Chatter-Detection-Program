@@ -65,12 +65,12 @@ class ChatterDetector:
         self.totSkip=0
         self.totScans=0
 
-        self.interface=Base.RestfulInterface()
+        self.interface=None
         self.MachineOffsetX=0 #Offset of the machine coordinate along X from the part zero.
         self.inclineAngle=7 #This measure is in degrees.
 
-        self.lobeRPM=[]
-        self.lobeDepth=[]
+        self.lobeRPM=[1250,1260,1270,1400,1450,1455,1325,1350]
+        self.lobeDepth=[9,8.55,8.05,8.1,8.55,9.1,7.4,7.5]
 
     def butter_highpass(self,N, Wn): #Helper function to apply Butterworth filter to data.
         return butter(N,Wn,'high',output="sos")
@@ -79,6 +79,9 @@ class ChatterDetector:
         sos = self.butter_highpass(N,Wn)
         y = signal.sosfilt(sos, data)
         return y
+
+    def ConnectMachine(self):
+        self.interface=Base.RestfulInterface()
 
     def ConnectDAQ(self):
         # Open first found LabJack
@@ -280,8 +283,8 @@ class ChatterDetector:
         filename="PCB_"+str(timestamp.month)+"_"+str(timestamp.day)+"_"+str(timestamp.hour)+"_"+str(timestamp.minute)+".csv"
         with open(filename, 'w',newline="") as csvfile:
             csvwriter = csv.writer(csvfile)
-            for reading in range(len(accelX)): #Skipping the first second of data, which contains skipped scans.
-                csvwriter.writerow([times[reading],accelX[reading],accelY[reading]]) #Data made to still start at 0 seconds.
+            for reading in range(len(accelX)):
+                csvwriter.writerow([times[reading],accelX[reading],accelY[reading]])
 
         #Plotting the raw voltage readings that will end up being calculated for acceleration data.
         plt.figure(1)
@@ -304,16 +307,24 @@ class ChatterDetector:
         #Attempt to get workpiece dimensions from API.
         self.MachineOffsetX=float(input("What is the X offset of the part?"))
 
-    def long_function(n,x1,x2,x3,x4,c2,c3,c4):
+    def long_function(self,n,x1,x2,x3,x4,c2,c3,c4):
         return 1/(2*x1*abs(np.minimum(np.real(-(x2+c2*1j)/(n**2*1j/(x3+c3*1j)+(x4+c4*1j)*1j*n/(x3+c3*1j)+1)),np.array([0 for kk in range(len(n))]))))
         #Above is the equation from the 2021 Brecher paper. Note how some of the constants are actually complex, so extra unknowns are added.
 
     def CreateStabilityLobe(self):
-        popt,pcov=curve_fit(self.long_function,self.lobeRPM,self.lobeDepth,maxfev=900000) #Fitting a curve, with a high maxfev value to give enough time for calculation.
+        timestamp=datetime.now()
+        filename="Stability_Lobe_Points_For_"+str(timestamp.month)+"_"+str(timestamp.day)+"_"+str(timestamp.hour)+"_"+str(timestamp.minute)+".csv"
+        with open(filename, 'w',newline="") as csvfile:
+            csvwriter = csv.writer(csvfile)
+            for reading in range(len(self.lobeRPM)):
+                csvwriter.writerow([self.lobeRPM[reading],self.lobeDepth[reading]])
+
+        popt,pcov=curve_fit(self.long_function,np.array(self.lobeRPM),np.array(self.lobeDepth),maxfev=900000) #Fitting a curve, with a high maxfev value to give enough time for calculation.
         yFit=self.long_function(np.array([k for k in range(1000,15000)]),*popt) #Getting the Y values of points on the fitted curve.
         plt.plot(np.array([k for k in range(1000,15000)]),yFit) #Plotting the curve fitted to the data.
         plt.plot(self.lobeRPM,self.lobeDepth,"k.")
         plt.show()
+
         timestamp=datetime.now()
         filename="Stability_Lobe_Constants_For_"+str(timestamp.month)+"_"+str(timestamp.day)+"_"+str(timestamp.hour)+"_"+str(timestamp.minute)+".csv"
         with open(filename, 'w',newline="") as csvfile:
