@@ -282,8 +282,8 @@ class ChatterDetector:
         times=times[int(self.scanRate):]
         accelX=accelX[int(self.scanRate):]
         accelY=accelY[int(self.scanRate):]
-        accelX=signal.detrend(accelX,type="constant")
-        accelY=signal.detrend(accelY,type="constant")
+        accelX=signal.detrend(accelX,type="linear")
+        accelY=signal.detrend(accelY,type="linear")
         timestamp=datetime.now()
         filename="PCB_"+str(timestamp.month)+"_"+str(timestamp.day)+"_"+str(timestamp.hour)+"_"+str(timestamp.minute)+".csv"
         with open(filename, 'w',newline="") as csvfile:
