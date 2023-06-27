@@ -51,9 +51,13 @@ import statistics
 class ChatterDetector:
     def __init__(self):
         self.X_AXIS_SENSITIVITY=0.001156 #Obtained from sensor callibration sheet.
+        self.X_AXIS_OFFSET=-290.337933013119 #Calculated experimentally from X-axis readings.
         self.Y_AXIS_SENSITIVITY=0.001055 #Obtained from sensor callibration sheet.
+        self.Y_AXIS_OFFSET=-366.66280307069917 #Calculated experimentally from Y-axis readings.
 
+        self.samplingFrequency=8000 #The frequency, in Hz, that sensor data is being read at.
         self.timeWindow=0.3 #Length of the period of time that will be analyzed for chatter.
+        self.timeResolution=0.1 #The time between chatter indicator readings.
         self.timeIndex=5 #Index at which chatter detection program will begin, so as to avoid skipped scans in data.
         self.start=-999 #Time at which a batch of readings begins.
         self.end=-999 #Time at which a batch of readings ends.
@@ -69,8 +73,8 @@ class ChatterDetector:
         self.MachineOffsetX=0 #Offset of the machine coordinate along X from the part zero.
         self.inclineAngle=7 #This measure is in degrees.
 
-        self.lobeRPM=[1250,1260,1270,1400,1450,1455,1325,1350]
-        self.lobeDepth=[9,8.55,8.05,8.1,8.55,9.1,7.4,7.5]
+        self.lobeRPM=[]
+        self.lobeDepth=[]
 
     def butter_highpass(self,N, Wn): #Helper function to apply Butterworth filter to data.
         return butter(N,Wn,'high',output="sos")
@@ -101,7 +105,7 @@ class ChatterDetector:
         self.aScanListNames = ["AIN0","AIN3"]  # Scan list names to stream
         self.numAddresses = len(self.aScanListNames)
         aScanList = ljm.namesToAddresses(self.numAddresses, self.aScanListNames)[0]
-        self.scanRate = 8000 #Ideally, the sampling frequency would be this value in Hz.
+        self.scanRate = self.samplingFrequency #Ideally, the sampling frequency would be this value in Hz.
         scansPerRead = int(self.scanRate / 2)
 
         try:
@@ -152,6 +156,7 @@ class ChatterDetector:
             print(e)
 
     def RecordCut(self):
+        self.ConnectDAQ()
         times=[] #Stores the time at which sensor readings have been taken.
         accelX=[] #Stores the acceleration readings on the X-axis.
         accelY=[] #Stores the acceleration readings on the Y-axis.
@@ -166,7 +171,7 @@ class ChatterDetector:
 
         i = 1
         try:
-            while 91:
+            while i<91:
                 ret = ljm.eStreamRead(self.handle)
 
                 aData = ret[0] #The variable aData will contain alternating readings from both channels since it scans in order.
@@ -192,18 +197,16 @@ class ChatterDetector:
                 intervalTime=0.5/len(xBuf)
                 for j in range(len(xBuf)):
                     tBuf.append(intervalTime*j+0.5*(i-1))
-                    xBuf[j]=xBuf[j]/self.X_AXIS_SENSITIVITY
-                    yBuf[j]=yBuf[j]/self.Y_AXIS_SENSITIVITY
-                xBuf=signal.detrend(xBuf,type="constant")
-                yBuf=signal.detrend(yBuf,type="constant")
-                accelX+=list(xBuf)
-                accelY+=list(yBuf)
+                    xBuf[j]=xBuf[j]/self.X_AXIS_SENSITIVITY-self.X_AXIS_OFFSET
+                    yBuf[j]=yBuf[j]/self.Y_AXIS_SENSITIVITY-self.Y_AXIS_OFFSET
+                accelX+=xBuf
+                accelY+=yBuf
                 times+=tBuf
                 i += 1
 
                 while True:
-                    startWindow=self.timeIndex*8000*0.1
-                    endWindow=startWindow+self.timeWindow*8000
+                    startWindow=self.timeIndex*self.samplingFrequency*self.timeResolution
+                    endWindow=startWindow+self.timeWindow*self.samplingFrequency
                     if endWindow>=len(times):
                         break
                     startWindow=int(startWindow)
@@ -239,7 +242,7 @@ class ChatterDetector:
                     tX=statistics.stdev(dispX)
                     tY=statistics.stdev(dispY)
                     chatterIndicator=sX*sY/(tX*tY)
-                    tChatter.append(self.timeIndex*0.1+self.timeWindow)
+                    tChatter.append(self.timeIndex*self.timeResolution+self.timeWindow)
                     yChatter.append(chatterIndicator)
                     if chatterIndicator>0.9:
                         self.lobeRPM.append(self.interface.GetSpindleSpeed())
@@ -273,6 +276,8 @@ class ChatterDetector:
             e = sys.exc_info()[1]
             print(e)
 
+        ljm.close(self.handle)
+
         #Removing first second of bad data and aligning the acceleration readings to start and end at 0.
         times=times[int(self.scanRate):]
         accelX=accelX[int(self.scanRate):]
@@ -288,8 +293,8 @@ class ChatterDetector:
 
         #Plotting the raw voltage readings that will end up being calculated for acceleration data.
         plt.figure(1)
-        plt.plot(tChatter[3:],yChatter[3:])
-        plt.plot(tChatter[3:],yChatter[3:],"ro")
+        plt.plot(tChatter,yChatter)
+        plt.plot(tChatter,yChatter,"ro")
         plt.show()
 
     def PromptSpindleSpeedIncrease(self):
@@ -302,10 +307,6 @@ class ChatterDetector:
         toolPositionX=self.interface.GetMachinePositionX()
         depthOfCut=tan(self.inclineAngle*pi/180.0)*(toolPositionX-self.MachineOffsetX)
         return depthOfCut
-        
-    def GetMachineSettings(self):
-        #Attempt to get workpiece dimensions from API.
-        self.MachineOffsetX=float(input("What is the X offset of the part?"))
 
     def long_function(self,n,x1,x2,x3,x4,c2,c3,c4):
         return 1/(2*x1*abs(np.minimum(np.real(-(x2+c2*1j)/(n**2*1j/(x3+c3*1j)+(x4+c4*1j)*1j*n/(x3+c3*1j)+1)),np.array([0 for kk in range(len(n))]))))
@@ -331,7 +332,6 @@ class ChatterDetector:
             csvwriter = csv.writer(csvfile)
             csvwriter.writerow(list(popt))
     
-    def DetectorShutdown(self):
-        # Close handle and connection with machine.
-        ljm.close(self.handle)
+    def MachineShutdown(self):
+        # Close connection with machine.
         self.interface.Shutdown()

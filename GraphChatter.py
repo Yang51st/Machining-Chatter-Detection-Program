@@ -50,7 +50,7 @@ accelX=signal.detrend(accelX,type="constant")
 accelY=signal.detrend(accelY,type="constant")
 
 windowTime=0.3 #A range of 0.3 seconds of data will be analyzed at a time.
-revolutionTime=0.02 #Time it takes for the spindle to rotate a full term. Used to approximate bisection point timings.
+revolutionTime=60/12000 #Time it takes for the spindle to rotate a full term. Used to approximate bisection point timings.
 poincare=9.2 #The specific time of the poincare section that will be graphed so bisection point and trajectory plotting can be verified.
 packageResolution=0.1 #Every 0.1 seconds, a new window of data will be analyzed.
 lens=int(len(timeXF)/timeXF[-1]*packageResolution) #Calculates how many readings will be analyzed at a time.
