@@ -28,7 +28,7 @@ timeXF=[] #Stores the time at which sensor readings have been taken.
 accelY=[]
 timeYF=[] #Stores the time at which sensor readings have been taken.
 
-filename="VibrationData/Aluminum/End Mill/0p5IN/12000RPM/PCB_F60IN_T25_D0p125IN.csv"
+filename="VibrationData/Steel/EndMill/12MM/6000RPM/PCB_F18IN_T50_D0p25IN3.csv"
 with open(filename,mode="r") as file:
     csvFile = csv.reader(file)
     for lines in csvFile:
@@ -50,8 +50,8 @@ accelX=signal.detrend(accelX,type="constant")
 accelY=signal.detrend(accelY,type="constant")
 
 windowTime=0.3 #A range of 0.3 seconds of data will be analyzed at a time.
-revolutionTime=60/12000 #Time it takes for the spindle to rotate a full term. Used to approximate bisection point timings.
-poincare=9.2 #The specific time of the poincare section that will be graphed so bisection point and trajectory plotting can be verified.
+revolutionTime=60/3000 #Time it takes for the spindle to rotate a full term. Used to approximate bisection point timings.
+poincare=11.3 #The specific time of the poincare section that will be graphed so bisection point and trajectory plotting can be verified.
 packageResolution=0.1 #Every 0.1 seconds, a new window of data will be analyzed.
 lens=int(len(timeXF)/timeXF[-1]*packageResolution) #Calculates how many readings will be analyzed at a time.
 
