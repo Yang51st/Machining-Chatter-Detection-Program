@@ -61,6 +61,7 @@ class ChatterDetector:
         self.timeIndex=5 #Index at which chatter detection program will begin, so as to avoid skipped scans in data.
         self.start=-999 #Time at which a batch of readings begins.
         self.end=-999 #Time at which a batch of readings ends.
+        self.recording=False #Variable that determines if vibration measurements will be taken.
 
         self.handle=None
         self.aScanListNames=[]
@@ -70,7 +71,8 @@ class ChatterDetector:
         self.totScans=0
 
         self.interface=None
-        self.MachineOffsetX=0 #Offset of the machine coordinate along X from the part zero.
+        self.MachineOffsetX=431.85 #Offset of the machine coordinate along X from the part zero. Unit is millimetres.
+        self.MachineOffsetZ=-480.633 #Offset of the machine coordinate along Z from the part zero. Unit is millimetres.
         self.inclineAngle=7 #This measure is in degrees.
 
         self.lobeRPM=[]
@@ -156,6 +158,12 @@ class ChatterDetector:
             print(e)
 
     def RecordCut(self):
+        while True:
+            if self.Ready():
+                break
+        while True:
+            if self.interface.GetRapidPercentage()>0:
+                break
         self.ConnectDAQ()
         times=[] #Stores the time at which sensor readings have been taken.
         accelX=[] #Stores the acceleration readings on the X-axis.
@@ -171,7 +179,8 @@ class ChatterDetector:
 
         i = 1
         try:
-            while i<91:
+            while self.recording:
+                self.CheckForStop()
                 ret = ljm.eStreamRead(self.handle)
 
                 aData = ret[0] #The variable aData will contain alternating readings from both channels since it scans in order.
@@ -246,7 +255,8 @@ class ChatterDetector:
                     yChatter.append(chatterIndicator)
                     if chatterIndicator>0.9:
                         self.lobeRPM.append(self.interface.GetSpindleSpeed())
-                        self.lobeDepth.append(self.GetDepthOfCut())
+                        self.lobeDepth.append(self.GetDepthOfCut(type="flat"))
+                        print("Hit Stop Cycle")
                     self.timeIndex+=1
 
             self.end = datetime.now()
@@ -303,10 +313,15 @@ class ChatterDetector:
     def PromptSpindleSpeedDecrease(self):
         print("Decrease Spindle Speed by 5 percent.")
 
-    def GetDepthOfCut(self):
-        toolPositionX=self.interface.GetMachinePositionX()
-        depthOfCut=tan(self.inclineAngle*pi/180.0)*(toolPositionX-self.MachineOffsetX)
-        return depthOfCut
+    def GetDepthOfCut(self,type="flat"):
+        if type=="incline":
+            toolPositionX=self.interface.GetMachinePositionX()
+            depthOfCut=tan(self.inclineAngle*pi/180.0)*(toolPositionX-self.MachineOffsetX)
+            return depthOfCut
+        else:
+            toolPositionZ=self.interface.GetMachinePositionZ()
+            depthOfCut=toolPositionZ-self.MachineOffsetZ
+            return depthOfCut
 
     def long_function(self,n,x1,x2,x3,x4,c2,c3,c4):
         return 1/(2*x1*abs(np.minimum(np.real(-(x2+c2*1j)/(n**2*1j/(x3+c3*1j)+(x4+c4*1j)*1j*n/(x3+c3*1j)+1)),np.array([0 for kk in range(len(n))]))))
@@ -332,6 +347,17 @@ class ChatterDetector:
             csvwriter = csv.writer(csvfile)
             csvwriter.writerow(list(popt))
     
+    def Ready(self):
+        if self.interface.GetRapidPercentage()==0 and self.recording==False:
+            self.recording=True
+            return True
+        else:
+            return False
+        
+    def CheckForStop(self):
+        if self.interface.IsStopped():
+            self.recording=False
+
     def MachineShutdown(self):
         # Close connection with machine.
         self.interface.Shutdown()
