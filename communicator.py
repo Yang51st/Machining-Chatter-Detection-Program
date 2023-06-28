@@ -1,9 +1,9 @@
-import ChatterDetector as ChatterDetector
+import ChatterDetector as CD
 
-detector=ChatterDetector.ChatterDetector()
+detector=CD.ChatterDetector()
 detector.ConnectMachine()
 POINTS_TO_COLLECT=8
-for ptc in range(1):
+while len(detector.lobeRPM)<POINTS_TO_COLLECT:
     detector.RecordCut()
 detector.MachineShutdown()
 detector.CreateStabilityLobe()

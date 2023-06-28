@@ -58,7 +58,6 @@ class ChatterDetector:
         self.samplingFrequency=8000 #The frequency, in Hz, that sensor data is being read at.
         self.timeWindow=0.3 #Length of the period of time that will be analyzed for chatter.
         self.timeResolution=0.1 #The time between chatter indicator readings.
-        self.timeIndex=5 #Index at which chatter detection program will begin, so as to avoid skipped scans in data.
         self.start=-999 #Time at which a batch of readings begins.
         self.end=-999 #Time at which a batch of readings ends.
         self.recording=False #Variable that determines if vibration measurements will be taken.
@@ -71,8 +70,9 @@ class ChatterDetector:
         self.totScans=0
 
         self.interface=None
-        self.MachineOffsetX=431.85 #Offset of the machine coordinate along X from the part zero. Unit is millimetres.
-        self.MachineOffsetZ=-480.633 #Offset of the machine coordinate along Z from the part zero. Unit is millimetres.
+        self.MachineOffsetX=431.85 #Offset of the machine coordinate along X from the part zero. Unit is in millimetres.
+        self.MachineOffsetZ=-486.69 #Offset of the machine coordinate along Z from the part zero. Unit is in millimetres.
+        self.MaterialLengthX=4.12*25.4 #Length of the workpiece in millimetres.
         self.inclineAngle=7 #This measure is in degrees.
 
         self.lobeRPM=[]
@@ -172,10 +172,13 @@ class ChatterDetector:
         yChatter=[] #Stores the chatter indicator values calculated.
         startWindow=0 #Beginning index of the 0.3 second period that will be analyzed for chatter.
         endWindow=0 #Ending index of the 0.3 second window that will be analyzed for chatter.
+        addCI=True #Variable that determines if a calculated chatter indicator will be used for stability lobe creation.
+        timeIndex=5 #Index at which chatter detection program will begin, so as to avoid skipped scans in data.
 
         N,Wn=signal.buttord(0.05,0.0375,3,40) #Calculating the parameters for a Butterworth filter for processing the sensor data.
 
-        revolutionTime=60/self.interface.GetSpindleSpeed() #Calculates how long, in seconds, a revolution of the spindle takes.
+        spindleSpeed=self.interface.GetSpindleSpeed()
+        revolutionTime=60/spindleSpeed #Calculates how long, in seconds, a revolution of the spindle takes.
 
         i = 1
         try:
@@ -214,7 +217,7 @@ class ChatterDetector:
                 i += 1
 
                 while True:
-                    startWindow=self.timeIndex*self.samplingFrequency*self.timeResolution
+                    startWindow=timeIndex*self.samplingFrequency*self.timeResolution
                     endWindow=startWindow+self.timeWindow*self.samplingFrequency
                     if endWindow>=len(times):
                         break
@@ -241,7 +244,7 @@ class ChatterDetector:
                     bisY=[] #Stores Y-value of bisection points.
                     for tindex in range(len(filtTime)):
                         if filtTime[tindex]>=(prevTim+revolutionTime): #Checks to see if enough time has passed for a full rotation,
-                            bisX.append(dispX[tindex])                      #meaning that the bisection point would ideally be in the same position again.
+                            bisX.append(dispX[tindex])                 #meaning that the bisection point would ideally be in the same position again.
                             bisY.append(dispY[tindex])
                             prevTim=filtTime[tindex]
 
@@ -251,13 +254,15 @@ class ChatterDetector:
                     tX=statistics.stdev(dispX)
                     tY=statistics.stdev(dispY)
                     chatterIndicator=sX*sY/(tX*tY)
-                    tChatter.append(self.timeIndex*self.timeResolution+self.timeWindow)
+                    tChatter.append(timeIndex*self.timeResolution+self.timeWindow)
                     yChatter.append(chatterIndicator)
-                    if chatterIndicator>0.9:
-                        self.lobeRPM.append(self.interface.GetSpindleSpeed())
-                        self.lobeDepth.append(self.GetDepthOfCut(type="flat"))
+                    if chatterIndicator>0.9 and self.InBounds():
                         print("Hit Stop Cycle")
-                    self.timeIndex+=1
+                        if addCI and self.InBounds():
+                            self.lobeRPM.append(self.interface.GetSpindleSpeed())
+                            self.lobeDepth.append(self.GetDepthOfCut(type="flat"))
+                            addCI=False
+                    timeIndex+=1
 
             self.end = datetime.now()
 
@@ -295,7 +300,7 @@ class ChatterDetector:
         accelX=signal.detrend(accelX,type="linear")
         accelY=signal.detrend(accelY,type="linear")
         timestamp=datetime.now()
-        filename="PCB_"+str(timestamp.month)+"_"+str(timestamp.day)+"_"+str(timestamp.hour)+"_"+str(timestamp.minute)+".csv"
+        filename="PCB_"+str(timestamp.month)+"_"+str(timestamp.day)+"_"+str(timestamp.hour)+"_"+str(timestamp.minute)+"_"+str(int(spindleSpeed))+".csv"
         with open(filename, 'w',newline="") as csvfile:
             csvwriter = csv.writer(csvfile)
             for reading in range(len(accelX)):
@@ -317,11 +322,11 @@ class ChatterDetector:
         if type=="incline":
             toolPositionX=self.interface.GetMachinePositionX()
             depthOfCut=tan(self.inclineAngle*pi/180.0)*(toolPositionX-self.MachineOffsetX)
-            return depthOfCut
+            return (depthOfCut/25.4) #Result will be in inches.
         else:
             toolPositionZ=self.interface.GetMachinePositionZ()
             depthOfCut=toolPositionZ-self.MachineOffsetZ
-            return depthOfCut
+            return (depthOfCut/25.4) #Result will be in inches.
 
     def long_function(self,n,x1,x2,x3,x4,c2,c3,c4):
         return 1/(2*x1*abs(np.minimum(np.real(-(x2+c2*1j)/(n**2*1j/(x3+c3*1j)+(x4+c4*1j)*1j*n/(x3+c3*1j)+1)),np.array([0 for kk in range(len(n))]))))
@@ -357,6 +362,13 @@ class ChatterDetector:
     def CheckForStop(self):
         if self.interface.IsStopped():
             self.recording=False
+
+    def InBounds(self):
+        toolPositionX=self.interface.GetMachinePositionX()
+        if (self.MachineOffsetX+20)<=toolPositionX<=(self.MachineOffsetX+self.MaterialLengthX-20):
+            return True
+        else:
+            return False
 
     def MachineShutdown(self):
         # Close connection with machine.
