@@ -71,7 +71,7 @@ class ChatterDetector:
 
         self.interface=None
         self.MachineOffsetX=431.85 #Offset of the machine coordinate along X from the part zero. Unit is in millimetres.
-        self.MachineOffsetZ=-486.69 #Offset of the machine coordinate along Z from the part zero. Unit is in millimetres.
+        self.MachineOffsetZ=-492.277 #Offset of the machine coordinate along Z from the part zero. Unit is in millimetres.
         self.MaterialLengthX=4.12*25.4 #Length of the workpiece in millimetres.
         self.inclineAngle=7 #This measure is in degrees.
 
@@ -260,7 +260,7 @@ class ChatterDetector:
                         print("Hit Stop Cycle")
                         if addCI and self.InBounds():
                             self.lobeRPM.append(self.interface.GetSpindleSpeed())
-                            self.lobeDepth.append(self.GetDepthOfCut(type="flat"))
+                            self.lobeDepth.append(self.GetDepthOfCut(type="incline"))
                             addCI=False
                     timeIndex+=1
 
@@ -365,7 +365,7 @@ class ChatterDetector:
 
     def InBounds(self):
         toolPositionX=self.interface.GetMachinePositionX()
-        if (self.MachineOffsetX+20)<=toolPositionX<=(self.MachineOffsetX+self.MaterialLengthX-20):
+        if (self.MachineOffsetX+10)<=toolPositionX<=(self.MachineOffsetX+self.MaterialLengthX-10):
             return True
         else:
             return False
