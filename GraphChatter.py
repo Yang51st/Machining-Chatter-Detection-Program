@@ -30,7 +30,7 @@ timeXF=[] #Stores the time at which sensor readings have been taken.
 accelY=[]
 timeYF=[] #Stores the time at which sensor readings have been taken.
 
-filename="PCB_6_29_11_27_3000.csv"
+filename="VibrationData/PerfectoD1/DoF_XRail_YRail.csv"
 with open(filename,mode="r") as file:
     csvFile = csv.reader(file)
     for lines in csvFile:
@@ -53,7 +53,7 @@ accelY=signal.detrend(accelY,type="constant")
 
 windowTime=0.3 #A range of 0.3 seconds of data will be analyzed at a time.
 revolutionTime=60/SPINDLE_RPM #Time it takes for the spindle to rotate a full term. Used to approximate bisection point timings.
-poincare=15.8 #The specific time of the poincare section that will be graphed so bisection point and trajectory plotting can be verified.
+poincare=18.6 #The specific time of the poincare section that will be graphed so bisection point and trajectory plotting can be verified.
 packageResolution=0.1 #Every 0.1 seconds, a new window of data will be analyzed.
 lens=int(len(timeXF)/timeXF[-1]*packageResolution) #Calculates how many readings will be analyzed at a time.
 
