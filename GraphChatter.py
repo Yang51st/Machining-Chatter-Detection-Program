@@ -30,7 +30,7 @@ timeXF=[] #Stores the time at which sensor readings have been taken.
 accelY=[]
 timeYF=[] #Stores the time at which sensor readings have been taken.
 
-filename="VibrationData/Steel/EndMill/12MM/3000RPM/PCB_6_27_14_31.csv"
+filename="VibrationData/PerfectoMachine4/PFC3_F18_T25_D0p25IN_3000RPM.csv"
 with open(filename,mode="r") as file:
     csvFile = csv.reader(file)
     for lines in csvFile:
