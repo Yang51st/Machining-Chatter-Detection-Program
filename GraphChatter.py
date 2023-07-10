@@ -30,13 +30,13 @@ timeXF=[] #Stores the time at which sensor readings have been taken.
 accelY=[]
 timeYF=[] #Stores the time at which sensor readings have been taken.
 
-filename="VibrationData/PerfectoD1/DoF_XRail_YRail.csv"
+filename="VibrationData/Steel/EndMill/12MM/3000RPM/PCB_6_27_14_31.csv"
 with open(filename,mode="r") as file:
     csvFile = csv.reader(file)
     for lines in csvFile:
         try: #Skip the lines of data at the beginning that do not contain sensor readings.
             timeXF.append(float(lines[0]))
-            accelX.append(float(lines[1])) #Divide by 1000 to get acceleration in meters per second squared.
+            accelX.append(float(lines[1]))
         except:
             pass
 with open(filename,mode="r") as file:
@@ -44,7 +44,7 @@ with open(filename,mode="r") as file:
     for lines in csvFile:
         try: #Skip the lines of data at the beginning that do not contain sensor readings.
             timeYF.append(float(lines[0]))
-            accelY.append(float(lines[2])) #Divide by 1000 to get acceleration in meters per second squared.
+            accelY.append(float(lines[2]))
         except:
             pass
 
@@ -53,7 +53,7 @@ accelY=signal.detrend(accelY,type="constant")
 
 windowTime=0.3 #A range of 0.3 seconds of data will be analyzed at a time.
 revolutionTime=60/SPINDLE_RPM #Time it takes for the spindle to rotate a full term. Used to approximate bisection point timings.
-poincare=18.6 #The specific time of the poincare section that will be graphed so bisection point and trajectory plotting can be verified.
+poincare=11.6 #The specific time of the poincare section that will be graphed so bisection point and trajectory plotting can be verified.
 packageResolution=0.1 #Every 0.1 seconds, a new window of data will be analyzed.
 lens=int(len(timeXF)/timeXF[-1]*packageResolution) #Calculates how many readings will be analyzed at a time.
 
