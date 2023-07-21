@@ -1,6 +1,6 @@
 import csv
 
-filename="VibrationData/PerfectoD1/DoF_XRail_YRail.csv"
+filename="PCB_F18IN_T25_D0p125_3000RPM_5A.csv"
 times=[]
 col1=[]
 col2=[]

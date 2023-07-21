@@ -168,6 +168,11 @@ class ChatterDetector:
         times=[] #Stores the time at which sensor readings have been taken.
         accelX=[] #Stores the acceleration readings on the X-axis.
         accelY=[] #Stores the acceleration readings on the Y-axis.
+        loadT=[] #Stores the time at which load percentages are recorded.
+        loadS=[] #Stores the percent load on the given axis.
+        loadX=[] #Stores the percent load on the given axis.
+        loadY=[] #Stores the percent load on the given axis.
+        loadZ=[] #Stores the percent load on the given axis.
         tChatter=[] #Stores the time at which chatter indicators were calculated.
         yChatter=[] #Stores the chatter indicator values calculated.
         startWindow=0 #Beginning index of the 0.3 second period that will be analyzed for chatter.
@@ -214,6 +219,11 @@ class ChatterDetector:
                 accelX+=xBuf
                 accelY+=yBuf
                 times+=tBuf
+                loadT.append(tBuf[-1])
+                loadS.append(self.interface.GetSpindleLoad())
+                loadX.append(self.interface.GetAxisXLoad())
+                loadY.append(self.interface.GetAxisYLoad())
+                loadZ.append(self.interface.GetAxisZLoad())
                 i += 1
 
                 while True:
@@ -301,10 +311,15 @@ class ChatterDetector:
         accelY=signal.detrend(accelY,type="linear")
         timestamp=datetime.now()
         filename="PCB_"+str(timestamp.month)+"_"+str(timestamp.day)+"_"+str(timestamp.hour)+"_"+str(timestamp.minute)+"_"+str(int(spindleSpeed))+".csv"
+        loader=0
         with open(filename, 'w',newline="") as csvfile:
             csvwriter = csv.writer(csvfile)
             for reading in range(len(accelX)):
-                csvwriter.writerow([times[reading],accelX[reading],accelY[reading]])
+                if reading==0:
+                    csvwriter.writerow(["Time (s)","Accel X (m/s^2)","Accel Y (m/s^2)","Load S (%)","Load X (%)","Load Y (%)","Load Z (%)"])
+                if times[reading]>loadT[loader] and loader<len(loadT):
+                    loader+=1
+                csvwriter.writerow([times[reading],accelX[reading],accelY[reading],loadS[loader],loadX[loader],loadY[loader],loadZ[loader]])
 
         #Plotting the raw voltage readings that will end up being calculated for acceleration data.
         plt.figure(1)
