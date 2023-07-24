@@ -124,7 +124,7 @@ class RestfulInterface:
       self.init = False
       self.protocol = 'http'
       self.port = 4503
-      self.urlString = self.protocol + '://169.254.3.21:' + str(self.port)
+      self.urlString = self.protocol + '://169.254.227.26:' + str(self.port)
 
       result = requests.post(self.urlString + '/AuthService/Connect', \
           data = '{"username": "0049", \
@@ -144,14 +144,14 @@ class RestfulInterface:
         raise RestAPIException('Failed to subscribe to desktop run status events.')
 
       # Setup subscription client and start event processing thread
-      self.subscriptSocket = SubscriptionClient('169.254.3.21', 4505, self.tokenValue, False)  # True if protocol is 'https' else False
+      self.subscriptSocket = SubscriptionClient('169.254.227.26', 4505, self.tokenValue, False)  # True if protocol is 'https' else False
       self.clientThread = threading.Thread(target=self.subscriptSocket.ThreadRoutine)
       self.clientThread.start()
 
       # We'll run the rest of our commands securely
       self.protocol = 'https'
       self.port = 4504
-      self.urlString = self.protocol + '://169.254.3.21:' + str(self.port)
+      self.urlString = self.protocol + '://169.254.227.26:' + str(self.port)
 
       # Get a json remote command request object
       self.BulkStruct = requests.get(self.urlString + '/DataService/Bulk/SID_WINMAX_BULK_RCRID', headers=self.headers, verify=False)
