@@ -30,7 +30,7 @@ timeXF=[] #Stores the time at which sensor readings have been taken.
 accelY=[]
 timeYF=[] #Stores the time at which sensor readings have been taken.
 
-filename="PCB_F18IN_T25_D0p125_3000RPM_5A.csv"
+filename="VibrationData/HurcoVMX42SRTi/EBI_F18IN_T25_D0p125IN_3000RPM_5A_SKF_ON_TABLE.csv"
 with open(filename,mode="r") as file:
     csvFile = csv.reader(file)
     for lines in csvFile:
