@@ -37,6 +37,10 @@ def openData(filename):
                 accelY.append(float(lines[2]))
             except:
                 pass
+    accelX=signal.detrend(accelX,type="constant")
+    accelY=signal.detrend(accelY,type="constant")
+    accelX=butter_highpass_filter(accelX,N,Wn)
+    accelY=butter_highpass_filter(accelY,N,Wn)
     return timesT,accelX,accelY
 
 def findJumps(timeT,values):
@@ -66,11 +70,8 @@ timesT1,accelX1,accelY1=openData(filename1)
 filename2="VibrationData/HurcoVMX42SRTi/CutsAlongX/UnalignedData/EBI_F18IN_T25_D0p125IN_3000RPM_5A_ON_TABLE.csv"
 timesT2,accelX2,accelY2=openData(filename2)
 
-accelX1=signal.detrend(accelX1,type="constant")
-accelY1=signal.detrend(accelY1,type="constant")
-accelX1=butter_highpass_filter(accelX1,N,Wn)
-accelY1=butter_highpass_filter(accelY1,N,Wn)
 breakpoints1=findJumps(timesT1,accelY1)
+breakpoints2=findJumps(timesT2,accelY2)
 
 plt.figure(1)
 plt.clf()
