@@ -13,7 +13,7 @@ ws=f_stop/(f_sample/2) #Calculated omega stop frequency for analog filtering.
 g_pass=3 #Pass loss in dB.
 g_stop=40 #Stop attenuation in dB.
 
-SPINDLE_RPM=3000
+SPINDLE_RPM=12000
 
 N,Wn=signal.buttord(wp,ws,g_pass,g_stop)
 
@@ -30,7 +30,7 @@ timeXF=[] #Stores the time at which sensor readings have been taken.
 accelY=[]
 timeYF=[] #Stores the time at which sensor readings have been taken.
 
-filename="VibrationData/HurcoVMX42SRTi/CutsAlongX/PCB_F18IN_T25_D0p125_3000RPM_5A_ON_TABLE.csv"
+filename="VibrationData/HurcoVMX42Di/Aluminum/End Mill/0p5IN/12000RPM/PCB_DG3_12000.csv"
 with open(filename,mode="r") as file:
     csvFile = csv.reader(file)
     for lines in csvFile:
@@ -53,7 +53,7 @@ accelY=signal.detrend(accelY,type="constant")
 
 windowTime=0.3 #A range of 0.3 seconds of data will be analyzed at a time.
 revolutionTime=60/SPINDLE_RPM #Time it takes for the spindle to rotate a full term. Used to approximate bisection point timings.
-poincare=7 #The specific time of the poincare section that will be graphed so bisection point and trajectory plotting can be verified.
+poincare=6.9 #The specific time of the poincare section that will be graphed so bisection point and trajectory plotting can be verified.
 packageResolution=0.1 #Every 0.1 seconds, a new window of data will be analyzed.
 lens=int(len(timeXF)/timeXF[-1]*packageResolution) #Calculates how many readings will be analyzed at a time.
 
