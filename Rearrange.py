@@ -1,7 +1,7 @@
 import os
 import csv
 # assign directory
-directory = "VibrationData/HurcoVMX42SRTi/CutsAlongX/UnalignedData"
+directory = "EBI5AOVX"
  
 # iterate over files in
 # that directory
