@@ -1,81 +1,110 @@
-import csv
-from scipy.integrate import cumtrapz
-from scipy import signal
-import matplotlib.pyplot as plt
-from scipy.signal import butter
-import statistics
+from numpy import arange, sin, pi
 
-DETECTION_RESOLUTION=0.1 #The region of time that will be monitored for changes in magnitude.
-CHANGE_SENSITIVITY=2.5 #The relative change required to be considered a change in magnitude.
+import matplotlib
+matplotlib.use('WXAgg')
+from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
+from matplotlib.figure import Figure
 
-f_sample=8000 #Sampling frequency of PCB sensor in Hz.
-f_pass=11000 #Pass frequency in Hz.
-f_stop=10000 #Stop frequency in Hz.
-wp=f_pass/(f_sample/2) #Calculated omega pass frequency for analog filtering.
-ws=f_stop/(f_sample/2) #Calculated omega stop frequency for analog filtering.
-g_pass=3 #Pass loss in dB.
-g_stop=40 #Stop attenuation in dB.
+import wx
 
-def butter_highpass(N, Wn): #Helper function to apply Butterworth filter to data.
-    return butter(N,Wn,'high',output="sos")
+class MyFrame(wx.Frame):
+    def __init__(self, parent, id):
+        wx.Frame.__init__(self,parent, id, 'Data Aligner',
+                style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER,
+                size=(800, 400))
+        self.panel = wx.Panel(self, -1)
 
-def butter_highpass_filter(data, N,Wn): #Function to apply Butterworth filter to data.
-    sos = butter_highpass(N,Wn)
-    y = signal.sosfilt(sos, data)
-    return y
+        self.fig = Figure((5, 4), 75)
+        self.canvas = FigureCanvasWxAgg(self.panel, -1, self.fig)
+        self.scroll_range = 5000
+        self.canvas.SetScrollbar(wx.HORIZONTAL, 0, 5,
+                                 self.scroll_range)
 
-def openData(filename):
-    timesT=[]
-    accelX=[]
-    accelY=[]
-    with open(filename,mode="r") as file:
-        csvFile = csv.reader(file)
-        for lines in csvFile:
-            try: #Skip the lines of data at the beginning that do not contain sensor readings.
-                timesT.append(float(lines[0]))
-                accelX.append(float(lines[1]))
-                accelY.append(float(lines[2]))
-            except:
-                pass
-    accelX=signal.detrend(accelX,type="constant")
-    accelY=signal.detrend(accelY,type="constant")
-    accelX=butter_highpass_filter(accelX,N,Wn)
-    accelY=butter_highpass_filter(accelY,N,Wn)
-    return timesT,accelX,accelY
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.canvas, -1, wx.EXPAND)
 
-def findJumps(timeT,values):
-    breakpoints=[]
-    prevT=timeT[0]
-    runningAvg=[]
-    prevA=0
-    prevC=0
-    for ind in range(len(timeT)):
-        if timeT[ind]>=prevT+DETECTION_RESOLUTION:
-            ampl=max(runningAvg)-min(runningAvg)
-            cent=statistics.mean(runningAvg)
-            runningAvg=[]
-            prevT=timeT[ind]
-            if abs(ampl-prevA)/max(abs(prevA),0.001)>CHANGE_SENSITIVITY or abs(cent-prevC)/max(abs(prevC),0.001)>CHANGE_SENSITIVITY:
-                breakpoints.append(timeT[ind])
-                prevA=ampl
-                prevC=cent
-        runningAvg.append(values[ind])
-    return breakpoints
+        self.panel.SetSizer(sizer)
+        self.panel.Fit()
 
-N,Wn=signal.buttord(wp,ws,g_pass,g_stop)
+        self.init_data()
+        self.init_plot()
 
-filename1="VibrationData/HurcoVMX42SRTi/CutsAlongX/UnalignedData/EBI_F18IN_T25_D0p125IN_3000RPM_5A_ON_TABLE.csv"
-timesT1,accelX1,accelY1=openData(filename1)
+        self.canvas.Bind(wx.EVT_SCROLLWIN, self.OnScrollEvt)
 
-filename2="VibrationData/HurcoVMX42SRTi/CutsAlongX/UnalignedData/EBI_F18IN_T25_D0p125IN_3000RPM_5A_ON_TABLE.csv"
-timesT2,accelX2,accelY2=openData(filename2)
+    def init_data(self):
 
-breakpoints1=findJumps(timesT1,accelY1)
-breakpoints2=findJumps(timesT2,accelY2)
+        # Generate some data to plot:
+        self.dt = 0.001
+        self.t = arange(0,500000,self.dt)
+        self.PCB = sin(2*pi*self.t)
 
-plt.figure(1)
-plt.clf()
-plt.plot(timesT1,accelX1)
-plt.plot(timesT1,accelY1)
-plt.plot(breakpoints1,[0 for i in breakpoints1],"ro")
-plt.show()
+        # Extents of data sequence:
+        self.i_min = 0
+        self.i_max = len(self.t)
+
+        # Size of plot window:
+        self.i_window = 15*1600
+
+        # Indices of data interval to be plotted:
+        self.i_start = 0
+        self.i_end = self.i_start + self.i_window
+
+    def init_plot(self):
+        self.axesPCB = self.fig.add_subplot(211)
+        self.plot_dataPCB =self.axesPCB.plot(self.t[self.i_start:self.i_end],self.PCB[self.i_start:self.i_end])[0]
+        self.axesEBI = self.fig.add_subplot(212)
+        self.plot_dataEBI =self.axesEBI.plot(self.t[self.i_start:self.i_end],self.PCB[self.i_start:self.i_end])[0]
+
+    def draw_plot(self):
+        self.plot_dataPCB.set_xdata(self.t[self.i_start:self.i_end])
+        self.plot_dataPCB.set_ydata(self.PCB[self.i_start:self.i_end])
+        self.axesPCB.set_xlim((min(self.t[self.i_start:self.i_end]),
+                           max(self.t[self.i_start:self.i_end])))
+        self.axesPCB.set_ylim((min(self.PCB[self.i_start:self.i_end]),
+                            max(self.PCB[self.i_start:self.i_end])))
+        
+        self.plot_dataEBI.set_xdata(self.t[self.i_start:self.i_end])
+        self.plot_dataEBI.set_ydata(self.PCB[self.i_start:self.i_end])
+        self.axesEBI.set_xlim((min(self.t[self.i_start:self.i_end]),
+                           max(self.t[self.i_start:self.i_end])))
+        self.axesEBI.set_ylim((min(self.PCB[self.i_start:self.i_end]),
+                            max(self.PCB[self.i_start:self.i_end])))
+
+        # Redraw:
+        self.canvas.draw()
+
+    def update_scrollpos(self, new_pos):
+        self.i_start = self.i_min + new_pos
+        self.i_end = self.i_min + self.i_window + new_pos
+        self.canvas.SetScrollPos(wx.HORIZONTAL, new_pos)
+        self.draw_plot()
+
+    def OnScrollEvt(self, event):
+        evtype = event.GetEventType()
+
+        if evtype == wx.EVT_SCROLLWIN_THUMBTRACK.typeId:
+            pos = event.GetPosition()
+            self.update_scrollpos(pos)
+        elif evtype == wx.EVT_SCROLLWIN_LINEDOWN.typeId:
+            pos = self.canvas.GetScrollPos(wx.HORIZONTAL)
+            self.update_scrollpos(pos + 1)
+        elif evtype == wx.EVT_SCROLLWIN_LINEUP.typeId:
+            pos = self.canvas.GetScrollPos(wx.HORIZONTAL)
+            self.update_scrollpos(pos - 1)
+        elif evtype == wx.EVT_SCROLLWIN_PAGEUP.typeId:
+            pos = self.canvas.GetScrollPos(wx.HORIZONTAL)
+            self.update_scrollpos(pos - 10)
+        elif evtype == wx.EVT_SCROLLWIN_PAGEDOWN.typeId:
+            pos = self.canvas.GetScrollPos(wx.HORIZONTAL)
+            self.update_scrollpos(pos + 10)
+
+class MyApp(wx.App):
+    def OnInit(self):
+        self.frame = MyFrame(parent=None,id=-1)
+        self.frame.Show()
+        self.SetTopWindow(self.frame)
+        return True
+
+if __name__ == '__main__':
+    app = MyApp()
+    app.MainLoop()

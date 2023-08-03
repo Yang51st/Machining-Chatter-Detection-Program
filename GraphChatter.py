@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.signal import butter
 import statistics
 
-f_sample=8000 #Sampling frequency of sensor in Hz.
+f_sample=1600 #Sampling frequency of sensor in Hz.
 f_pass=200 #Pass frequency in Hz.
 f_stop=150 #Stop frequency in Hz.
 wp=f_pass/(f_sample/2) #Calculated omega pass frequency for analog filtering.
@@ -13,7 +13,7 @@ ws=f_stop/(f_sample/2) #Calculated omega stop frequency for analog filtering.
 g_pass=3 #Pass loss in dB.
 g_stop=40 #Stop attenuation in dB.
 
-SPINDLE_RPM=12000
+SPINDLE_RPM=3000
 
 N,Wn=signal.buttord(wp,ws,g_pass,g_stop)
 
@@ -30,7 +30,7 @@ timeXF=[] #Stores the time at which sensor readings have been taken.
 accelY=[]
 timeYF=[] #Stores the time at which sensor readings have been taken.
 
-filename="VibrationData/HurcoVMX42Di/Aluminum/End Mill/0p5IN/12000RPM/PCB_DG3_12000.csv"
+filename="VibrationData/HurcoVMX42SRTi/CutsAlongX/UnalignedData/EBI_F18IN_T75_D0p25IN_3000RPM_5A_ON_TABLE.csv"
 with open(filename,mode="r") as file:
     csvFile = csv.reader(file)
     for lines in csvFile:
