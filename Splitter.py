@@ -11,12 +11,12 @@ import statistics
 
 offset=0
 
-filenamePCB="VibrationData/HurcoVMX42SRTi/CutsAlongXYZ/PCB_F18IN_T100_D0p25_3000RPM_5AXYZ.csv"
+filenamePCB="VibrationData/HurcoVMX42SRTi/CutsAlongX/PCB_F18IN_T50_D0p25_3000RPM_5A_ON_TABLE.csv"
 timesPCB=[]
 col1PCB=[]
 col2PCB=[]
 
-filenameEBI="VibrationData/HurcoVMX42SRTi/CutsAlongXYZ/UnalignedData/EBI_F18IN_T100_D0p25_3000RPM_5AXYZ.csv"
+filenameEBI="VibrationData/HurcoVMX42SRTi/CutsAlongX/UnalignedData/EBI_F18IN_T50_D0p25IN_3000RPM_5A_ON_TABLE.csv"
 timesEBI=[]
 col1EBI=[]
 col2EBI=[]
