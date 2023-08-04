@@ -11,12 +11,12 @@ import statistics
 
 offset=0
 
-filenamePCB="VibrationData/HurcoVMX42SRTi/CutsAlongX/PCB_F18IN_T25_D0p25_3000RPM_5A_ON_TABLE.csv"
+filenamePCB="VibrationData/HurcoVMX42SRTi/CutsAlongXYZ/PCB_F18IN_T100_D0p25_3000RPM_5AXYZ.csv"
 timesPCB=[]
 col1PCB=[]
 col2PCB=[]
 
-filenameEBI="VibrationData/HurcoVMX42SRTi/CutsAlongX/UnalignedData/EBI_F18IN_T25_D0p25IN_3000RPM_5A_ON_TABLE.csv"
+filenameEBI="VibrationData/HurcoVMX42SRTi/CutsAlongXYZ/UnalignedData/EBI_F18IN_T100_D0p25_3000RPM_5AXYZ.csv"
 timesEBI=[]
 col1EBI=[]
 col2EBI=[]
@@ -31,7 +31,7 @@ def butter_highpass_filter(data, N,Wn): #Function to apply Butterworth filter to
     return y
 
 f_sample=8000 #Sampling frequency of PCB sensor in Hz.
-f_pass=11990 #Pass frequency in Hz.
+f_pass=12000 #Pass frequency in Hz.
 f_stop=10000 #Stop frequency in Hz.
 wp=f_pass/(f_sample/2) #Calculated omega pass frequency for analog filtering.
 ws=f_stop/(f_sample/2) #Calculated omega stop frequency for analog filtering.
@@ -80,7 +80,7 @@ class MyFrame(wx.Frame):
             #col1PCB=butter_highpass_filter(col1PCB,NPCB,WnPCB)
             #col2PCB=butter_highpass_filter(col2PCB,NPCB,WnPCB)
             self.tPCB = timesPCB
-            self.PCB = col1PCB
+            self.PCB = col2PCB
 
         with open(filenameEBI,mode="r") as file:
             csvFile = csv.reader(file)
@@ -102,7 +102,7 @@ class MyFrame(wx.Frame):
             #col2EBI=butter_highpass_filter(col2EBI,NEBI,WnEBI)
             #col3EBI=butter_highpass_filter(col3EBI,NEBI,WnEBI)
             self.tEBI = timesEBI
-            self.EBI = col1EBI
+            self.EBI = col2EBI
 
         # Extents of data sequence:
         self.i_min = 0
