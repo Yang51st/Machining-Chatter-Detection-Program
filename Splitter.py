@@ -55,8 +55,11 @@ class MyFrame(wx.Frame):
         self.panel.Fit()
         self.init_data()
         self.init_plot()
-
+        self.scroll_range = len(self.tPCB)//2
+        self.canvas.SetScrollbar(wx.HORIZONTAL, 0, 5,
+                                 self.scroll_range)
         self.canvas.Bind(wx.EVT_LEFT_DOWN, self.OnClick)
+        self.canvas.Bind(wx.EVT_SCROLLWIN, self.OnScrollEvt)
 
     def init_data(self):
 
@@ -147,6 +150,37 @@ class MyFrame(wx.Frame):
         global offset
         offset=timesPCB[self.i_start]
         self.draw_plot()
+
+    def update_scrollpos(self, new_pos):
+        self.i_start = self.i_min + new_pos
+        self.i_end = self.i_min + self.i_window + new_pos
+        self.i_start=min([self.i_start,len(self.tPCB)-self.i_window])
+        self.i_start=max([0,self.i_start])
+        self.i_end=min([self.i_end,len(self.tPCB)])
+        self.i_end=max([self.i_window,self.i_end])
+        self.canvas.SetScrollPos(wx.HORIZONTAL, new_pos)
+        global offset
+        offset=timesPCB[self.i_start]
+        self.draw_plot()
+
+    def OnScrollEvt(self, event):
+        evtype = event.GetEventType()
+
+        if evtype == wx.EVT_SCROLLWIN_THUMBTRACK.typeId:
+            pos = event.GetPosition()
+            self.update_scrollpos(pos)
+        elif evtype == wx.EVT_SCROLLWIN_LINEDOWN.typeId:
+            pos = self.canvas.GetScrollPos(wx.HORIZONTAL)
+            self.update_scrollpos(pos + 1)
+        elif evtype == wx.EVT_SCROLLWIN_LINEUP.typeId:
+            pos = self.canvas.GetScrollPos(wx.HORIZONTAL)
+            self.update_scrollpos(pos - 1)
+        elif evtype == wx.EVT_SCROLLWIN_PAGEUP.typeId:
+            pos = self.canvas.GetScrollPos(wx.HORIZONTAL)
+            self.update_scrollpos(pos - 10)
+        elif evtype == wx.EVT_SCROLLWIN_PAGEDOWN.typeId:
+            pos = self.canvas.GetScrollPos(wx.HORIZONTAL)
+            self.update_scrollpos(pos + 10)
 
 class MyApp(wx.App):
     def OnInit(self):
