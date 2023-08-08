@@ -11,12 +11,12 @@ import statistics
 
 offset=0
 
-filenamePCB="VibrationData/HurcoVMX42SRTi/CutsAlongX/PCB_F18IN_T50_D0p25_3000RPM_5A_ON_TABLE.csv"
+filenamePCB="VibrationData/HurcoVMX42SRTi/CutsAlongX/PCB_F18IN_T25_D0p125_3000RPM_5A_ON_TABLE.csv"
 timesPCB=[]
 col1PCB=[]
 col2PCB=[]
 
-filenameEBI="VibrationData/HurcoVMX42SRTi/CutsAlongX/UnalignedData/EBI_F18IN_T50_D0p25IN_3000RPM_5A_ON_TABLE.csv"
+filenameEBI="VibrationData/HurcoVMX42SRTi/CutsAlongX/UnalignedData/EBI_F18IN_T25_D0p125IN_3000RPM_5A_ON_TABLE.csv"
 timesEBI=[]
 col1EBI=[]
 col2EBI=[]
@@ -72,7 +72,7 @@ class MyFrame(wx.Frame):
                 try:
                     timesPCB.append(float(lines[0]))
                     col1PCB.append(float(lines[1]))
-                    col2PCB.append(float(lines[2]))
+                    col2PCB.append(float(lines[6]))
                 except:
                     pass
             col1PCB=signal.detrend(col1PCB,type="constant")
