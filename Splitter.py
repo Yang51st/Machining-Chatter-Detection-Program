@@ -4,10 +4,8 @@ matplotlib.use('WXAgg')
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 from matplotlib.figure import Figure
 import wx
-from scipy.integrate import cumtrapz
 from scipy import signal
 from scipy.signal import butter
-import statistics
 
 offset=0
 
