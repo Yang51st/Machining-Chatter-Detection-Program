@@ -132,7 +132,7 @@ for filename in os.listdir(directory):
             tX=statistics.stdev(dispX)
             tY=statistics.stdev(dispY)
             chatterIndicator=sX*sY/(tX*tY)
-            chatsT.append(windex*packageResolution+windowTime)
+            chatsT.append(windex*packageResolution+windowTime+2*timeXF[0]-timeXF[1])
             chatsI.append(chatterIndicator)
 
             windex+=1 #Moving on to calculate the next window of data.
@@ -153,10 +153,10 @@ for filename in os.listdir(directory):
                 try:
                     float(holder[0][0])
                 except:
-                    csvwriter.writerow(holder[0])
+                    csvwriter.writerow(holder[0]+["CI Value"])
                     holder=holder[1:]
                 CIindex=0
                 for row in holder:
-                    if chatsT[CIindex]<=float(row[0]):
+                    if chatsT[CIindex]<=float(row[0]) and CIindex<len(chatsT)-1:
                         CIindex+=1
-                        csvwriter.writerow(row+chatsI[CIindex])
+                    csvwriter.writerow(row+[str(chatsI[CIindex])])
