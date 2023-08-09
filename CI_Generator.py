@@ -12,25 +12,6 @@ for filename in os.listdir(directory):
     f = os.path.join(directory, filename)
     # checking if it is a file
     if os.path.isfile(f):
-        f_sample=1600 #Sampling frequency of sensor in Hz.
-        f_pass=200 #Pass frequency in Hz.
-        f_stop=150 #Stop frequency in Hz.
-        wp=f_pass/(f_sample/2) #Calculated omega pass frequency for analog filtering.
-        ws=f_stop/(f_sample/2) #Calculated omega stop frequency for analog filtering.
-        g_pass=3 #Pass loss in dB.
-        g_stop=40 #Stop attenuation in dB.
-
-        SPINDLE_RPM=3000
-
-        N,Wn=signal.buttord(wp,ws,g_pass,g_stop)
-
-        def butter_highpass(N, Wn): #Helper function to apply Butterworth filter to data.
-            return butter(N,Wn,'high',output="sos")
-
-        def butter_highpass_filter(data, N,Wn): #Function to apply Butterworth filter to data.
-            sos = butter_highpass(N,Wn)
-            y = signal.sosfilt(sos, data)
-            return y
 
         accelX=[]
         timeXF=[] #Stores the time at which sensor readings have been taken.
@@ -57,6 +38,40 @@ for filename in os.listdir(directory):
 
         accelX=signal.detrend(accelX,type="constant")
         accelY=signal.detrend(accelY,type="constant")
+
+        PCB_RATE=8000 #Sampling frequency of PCB wired sensor.
+        EBI_RATE=1600 #Sampling frequency of EBI bluetooth sensor.
+
+        f_sample=0
+        SPINDLE_RPM=0
+
+        settings=filename.split("_")
+        for item in settings:
+            if item.find("PCB")!=-1:
+                f_sample=PCB_RATE
+            if item.find("EBI")!=-1:
+                f_sample=EBI_RATE
+            if item.find("RPM")!=-1:
+                SPINDLE_RPM=int(item[:item.find("RPM")])
+                break
+        else:
+            SPINDLE_RPM=input("Please enter spindle RPM for",filename)
+
+        f_pass=200 #Pass frequency in Hz.
+        f_stop=150 #Stop frequency in Hz.
+        wp=f_pass/(f_sample/2) #Calculated omega pass frequency for analog filtering.
+        ws=f_stop/(f_sample/2) #Calculated omega stop frequency for analog filtering.
+        g_pass=3 #Pass loss in dB.
+        g_stop=40 #Stop attenuation in dB.
+        N,Wn=signal.buttord(wp,ws,g_pass,g_stop)
+
+        def butter_highpass(N, Wn): #Helper function to apply Butterworth filter to data.
+            return butter(N,Wn,'high',output="sos")
+
+        def butter_highpass_filter(data, N,Wn): #Function to apply Butterworth filter to data.
+            sos = butter_highpass(N,Wn)
+            y = signal.sosfilt(sos, data)
+            return y
 
         windowTime=0.3 #A range of 0.3 seconds of data will be analyzed at a time.
         revolutionTime=60/SPINDLE_RPM #Time it takes for the spindle to rotate a full term. Used to approximate bisection point timings.
