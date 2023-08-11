@@ -47,7 +47,7 @@ for filename in os.listdir(directory):
 
         settings=filename.split("_")
         for item in settings:
-            if item.find("PCB")!=-1:
+            if item.find("PCB")!=-1 or item.find("PFC")!=-1:
                 f_sample=PCB_RATE
             if item.find("EBI")!=-1:
                 f_sample=EBI_RATE
@@ -134,12 +134,6 @@ for filename in os.listdir(directory):
                 plt.plot(timeY,dispY,label="displacementY")
                 plt.legend(facecolor = 'gray', title = 'Legend',loc = 'upper left')
                 """
-                #Plots the overall trajectory in blue and the bisection points as red dots.
-                plt.figure(4)
-                plt.clf()
-                plt.plot(dispX,dispY)
-                plt.plot(bisX,bisY,"ro")
-                plt.show()
 
             #Taking the standard deviation of the bisection points and of the overall trajectory, then calculating the chatter indicator from them.
             sX=statistics.stdev(bisX)
@@ -152,26 +146,20 @@ for filename in os.listdir(directory):
 
             windex+=1 #Moving on to calculate the next window of data.
 
-        #Graphing the progress of the chatter indicator over time, as well as the actual acceleration values along the X and Y
-        #axes over time.
-        plt.plot(chatsT,chatsI)
-        plt.plot(chatsT,chatsI,"ro")
-        plt.show()
-        if input()=="YES":
-            holder=[]
-            with open(filename,mode="r") as file:
-                csvFile = csv.reader(file)
-                for lines in csvFile:
-                    holder.append(lines)
-            with open(f,'w',newline="") as csvfile:
-                csvwriter = csv.writer(csvfile)
-                try:
-                    float(holder[0][0])
-                except:
-                    csvwriter.writerow(holder[0]+["CI Value"])
-                    holder=holder[1:]
-                CIindex=0
-                for row in holder:
-                    if chatsT[CIindex]<=float(row[0]) and CIindex<len(chatsT)-1:
-                        CIindex+=1
-                    csvwriter.writerow(row+[str(chatsI[CIindex])])
+        holder=[]
+        with open(filename,mode="r") as file:
+            csvFile = csv.reader(file)
+            for lines in csvFile:
+                holder.append(lines)
+        with open(f,'w',newline="") as csvfile:
+            csvwriter = csv.writer(csvfile)
+            try:
+                float(holder[0][0])
+            except:
+                csvwriter.writerow(holder[0]+["CI Value"])
+                holder=holder[1:]
+            CIindex=0
+            for row in holder:
+                if chatsT[CIindex]<=float(row[0]) and CIindex<len(chatsT)-1:
+                    CIindex+=1
+                csvwriter.writerow(row+[str(chatsI[CIindex])])
