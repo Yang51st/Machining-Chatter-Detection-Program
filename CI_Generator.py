@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from scipy.signal import butter
 import statistics
 
-directory = "VibrationData/HurcoVMX42Di/Aluminum/End Mill/0p5IN/12000RPM"
+directory = "VibrationData/ChatterIndicatorTests"
 
 for filename in os.listdir(directory):
     f = os.path.join(directory, filename)
@@ -43,7 +43,7 @@ for filename in os.listdir(directory):
         EBI_RATE=1600 #Sampling frequency of EBI bluetooth sensor.
 
         f_sample=8000
-        SPINDLE_RPM=12000
+        SPINDLE_RPM=3000
 
         """settings=filename.split("_")
         for item in settings:
