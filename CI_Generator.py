@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from scipy.signal import butter
 import statistics
 
-directory = "VibrationData/HurcoVMX42SRTi/CutsAlongZ"
+directory = "VibrationData/PerfectoVMX6030i"
 
 for filename in os.listdir(directory):
     f = os.path.join(directory, filename)
