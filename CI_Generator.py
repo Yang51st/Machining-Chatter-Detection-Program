@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from scipy.signal import butter
 import statistics
 
-directory = "VibrationData/PerfectoVMX6030i"
+directory = "VibrationData/HurcoVMX42Di/Aluminum/End Mill/0p5IN/12000RPM"
 
 for filename in os.listdir(directory):
     f = os.path.join(directory, filename)
@@ -42,10 +42,10 @@ for filename in os.listdir(directory):
         PCB_RATE=8000 #Sampling frequency of PCB wired sensor.
         EBI_RATE=1600 #Sampling frequency of EBI bluetooth sensor.
 
-        f_sample=0
-        SPINDLE_RPM=0
+        f_sample=8000
+        SPINDLE_RPM=12000
 
-        settings=filename.split("_")
+        """settings=filename.split("_")
         for item in settings:
             if item.find("PCB")!=-1 or item.find("PFC")!=-1:
                 f_sample=PCB_RATE
@@ -55,7 +55,7 @@ for filename in os.listdir(directory):
                 SPINDLE_RPM=int(item[:item.find("RPM")])
                 break
         else:
-            SPINDLE_RPM=input("Please enter spindle RPM for",filename)
+            SPINDLE_RPM=input("Please enter spindle RPM for",filename)"""
 
         f_pass=200 #Pass frequency in Hz.
         f_stop=150 #Stop frequency in Hz.
