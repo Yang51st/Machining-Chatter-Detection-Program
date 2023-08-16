@@ -9,12 +9,12 @@ from scipy.signal import butter
 
 offset=0
 
-filenamePCB="VibrationData/HurcoVMX42SRTi/CutsAlongXYZ/Neue/PCB_T100_0p125IN_6900RPM.csv"
+filenamePCB="VibrationData/HurcoVMX42SRTi/PCB_T100_0p125IN_6000RPM.csv"
 timesPCB=[]
 col1PCB=[]
 col2PCB=[]
 
-filenameEBI="VibrationData/HurcoVMX42SRTi/CutsAlongXYZ/Neue/UnalignedData/EBI_T100_0p125IN_6900RPM_5XYZ.csv"
+filenameEBI="VibrationData/HurcoVMX42SRTi/UnalignedData/EBI_T100_0p125IN_6000RPM.csv"
 timesEBI=[]
 col1EBI=[]
 col2EBI=[]
@@ -70,7 +70,7 @@ class MyFrame(wx.Frame):
                 try:
                     timesPCB.append(float(lines[0]))
                     col1PCB.append(float(lines[1]))
-                    col2PCB.append(float(lines[1]))
+                    col2PCB.append(float(lines[4]))
                 except:
                     pass
             col1PCB=signal.detrend(col1PCB,type="constant")
