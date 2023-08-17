@@ -9,12 +9,12 @@ from scipy.signal import butter
 
 offset=0
 
-filenamePCB="VibrationData/HurcoVMX42SRTi/PCB_T100_0p125IN_6000RPM.csv"
+filenamePCB="PCB_T100_0p375IN_12000RPM.csv"
 timesPCB=[]
 col1PCB=[]
 col2PCB=[]
 
-filenameEBI="VibrationData/HurcoVMX42SRTi/UnalignedData/EBI_T100_0p125IN_6000RPM.csv"
+filenameEBI="UnalignedData/EBI_T100_0p375IN_12000RPM.csv"
 timesEBI=[]
 col1EBI=[]
 col2EBI=[]
