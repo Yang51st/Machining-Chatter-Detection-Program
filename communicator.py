@@ -1,5 +1,5 @@
 import ChatterDetector as CD
-
+#D0.05IN for first batch.
 detector=CD.ChatterDetector()
 detector.ConnectMachine()
 POINTS_TO_COLLECT=8
